@@ -10,11 +10,16 @@ function splitList(value) {
 
 export const config = {
   adapter: process.env.BOT_ADAPTER || 'console',
+  aiProvider: process.env.AI_PROVIDER || 'deepseek', // deepseek | ollama
   port: Number(process.env.PORT || process.env.BOT_PORT || 3000),
   deepseek: {
     apiKey: process.env.DEEPSEEK_API_KEY,
     baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
     model: process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+  },
+  ollama: {
+    baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+    model: process.env.OLLAMA_MODEL || 'deepseek-r1:32b'
   },
   bot: {
     systemPrompt:
@@ -48,8 +53,8 @@ export const config = {
 };
 
 export function validateConfig() {
-  if (!config.deepseek.apiKey) {
-    throw new Error('Missing DEEPSEEK_API_KEY. Copy .env.example to .env and fill it in.');
+  if (config.aiProvider !== 'ollama' && !config.deepseek.apiKey) {
+    throw new Error('Missing DEEPSEEK_API_KEY. Copy .env.example to .env and fill it in, or set AI_PROVIDER=ollama.');
   }
 
   if (!['console', 'wechaty', 'wecom', 'kefu'].includes(config.adapter)) {
