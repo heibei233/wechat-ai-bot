@@ -85,11 +85,11 @@ export async function sendKefuMessage(config, externalUserId, content) {
  * Poll for new messages from WeChat Customer Service.
  * https://developer.work.weixin.qq.com/document/path/94670#%E8%8E%B7%E5%8F%96%E6%B6%88%E6%81%AF
  */
-export async function syncKefuMessages(config, openKfId, cursor = '') {
+export async function syncKefuMessages(config, openKfId, cursor = '', callbackToken = '') {
   const token = await getToken(config);
   const body = JSON.stringify({
     cursor,
-    token: '',
+    token: callbackToken || '',
     limit: 100,
     voice_format: 0,
     open_kfid: openKfId

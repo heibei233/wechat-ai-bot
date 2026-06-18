@@ -172,7 +172,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // POST — incoming message (process it directly, no polling)
+    // POST — incoming event notification (kf_msg_or_event contains Token for sync_msg)
     if (req.method === 'POST' && u.pathname === '/kefu') {
       const sig = u.searchParams.get('msg_signature') || '';
       const ts = u.searchParams.get('timestamp') || '';
@@ -184,41 +184,42 @@ const server = createServer(async (req, res) => {
       const em = body.match(/<Encrypt><!\[CDATA\[(.*?)\]\]><\/Encrypt>/);
       const encrypted = em ? em[1] : (() => { try { return JSON.parse(body).encrypt || JSON.parse(body).Encrypt; } catch { return null; } })();
 
-      if (!encrypted) { res.writeHead(200); res.end('ok'); return; }
+      // ACK immediately regardless
+      res.writeHead(200); res.end('ok');
 
-      // Verify signature
-      const ourSig = kefuCrypto.signature(ts, nonce, encrypted);
-      if (sig && ourSig !== sig) { res.writeHead(200); res.end('ok'); return; }
+      if (!encrypted) return;
 
       // Decrypt
       let decrypted;
-      try { decrypted = kefuCrypto.decrypt(encrypted); } catch (e) { res.writeHead(200); res.end('ok'); return; }
+      try { decrypted = kefuCrypto.decrypt(encrypted); } catch (e) { console.error('[Kefu] Decrypt failed:', e.message); return; }
 
-      const text = decrypted.message;
+      const xml = decrypted.message;
+      console.log('[Kefu] Event XML:', xml.slice(0, 200));
 
-      // Parse message
-      let userId = '', content = '', msgType = '';
-      if (text.startsWith('<')) {
-        userId = (text.match(/<FromUserName><!\[CDATA\[(.*?)\]\]><\/FromUserName>/) || [])[1] || '';
-        content = (text.match(/<Content><!\[CDATA\[(.*?)\]\]><\/Content>/) || [])[1] || '';
-        msgType = (text.match(/<MsgType><!\[CDATA\[(.*?)\]\]><\/MsgType>/) || [])[1] || '';
-      } else {
+      // Parse event
+      const ev = (xml.match(/<Event><!\[CDATA\[(.*?)\]\]><\/Event>/) || [])[1] || '';
+      const token = (xml.match(/<Token><!\[CDATA\[(.*?)\]\]><\/Token>/) || [])[1] || '';
+      const kfId = (xml.match(/<OpenKfId><!\[CDATA\[(.*?)\]\]><\/OpenKfId>/) || [])[1] || '';
+
+      if (ev === 'kf_msg_or_event' && token) {
+        console.log('[Kefu] kf_msg_or_event received, syncing...');
+        // Use the Token to pull actual messages via sync_msg
         try {
-          const j = JSON.parse(text);
-          userId = j.FromUserName || j.external_userid || '';
-          content = j.Content || j.text?.content || '';
-          msgType = j.MsgType || 'text';
-        } catch {}
-      }
-
-      console.log(`[Kefu] ${userId}: ${content}`);
-
-      // ACK immediately
-      res.writeHead(200); res.end('ok');
-
-      // Handle and reply
-      if (msgType === 'text' && content && userId) {
-        await handleMessage(userId, content);
+          const { syncKefuMessages: syncMsg } = await import('./wecom/kefuApi.js');
+          const result = await syncMsg(apiConfig, kfId || apiConfig.openKfId, '', token); // token from callback
+          if (result?.msg_list) {
+            for (const msg of result.msg_list) {
+              if (msg.origin !== 3 || msg.msgtype !== 'text') continue;
+              const content = msg.text?.content;
+              const userId = msg.external_userid;
+              if (!content || !userId) continue;
+              console.log(`[Kefu] ${userId}: ${content}`);
+              await handleMessage(userId, content);
+            }
+          }
+        } catch (e) {
+          console.error('[Kefu] sync_msg failed:', e.message);
+        }
       }
       return;
     }
