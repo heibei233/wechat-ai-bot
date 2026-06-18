@@ -26,7 +26,7 @@ const apiConfig = {
   corpId: process.env.WECOM_CORP_ID || '',
   secret: process.env.WECOM_KEFU_SECRET || process.env.WECOM_AGENT_SECRET || '',
   agentSecret: process.env.WECOM_AGENT_SECRET || '',
-  openKfId: process.env.WECOM_KEFU_OPEN_KFID || 'kfc98d531711329b810'
+  openKfId: process.env.WECOM_KEFU_OPEN_KFID || 'kfc3f05d14e417b3beb'
 };
 
 // Resolve real open_kfid from API
@@ -39,7 +39,7 @@ async function initOpenKfid() {
       return;
     }
   } catch (e) { console.error('[Kefu] Account list failed:', e.message); }
-  if (!apiConfig.openKfId) apiConfig.openKfId = 'kfc98d531711329b810';
+  if (!apiConfig.openKfId) apiConfig.openKfId = 'kfc3f05d14e417b3beb';
   console.log(`[Kefu] Using env open_kfid: ${apiConfig.openKfId}`);
 }
 
