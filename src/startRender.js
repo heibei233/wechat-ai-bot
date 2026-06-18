@@ -38,12 +38,15 @@ let cursor = '';
 let resolvedOpenKfId = openKfId;
 const lastReply = new Map();
 const latestMsg = new Map();
+let pollInterval = 10000;
+let errorStreak = 0;
 
 async function resolveAccount() {
   try {
     const accounts = await listKefuAccounts(apiConfig);
     if (accounts.length > 0) {
       resolvedOpenKfId = accounts[0].open_kfid;
+      apiConfig.openKfId = resolvedOpenKfId; // sync into apiConfig for sends
       console.log(`[Kefu] Using open_kfid: ${resolvedOpenKfId}`);
     }
   } catch (e) { console.error('Account resolve failed:', e.message); }
@@ -82,10 +85,15 @@ async function pollMessages() {
 
     if (result.next_cursor) cursor = result.next_cursor;
     if (processedMsgs.size > 10000) processedMsgs.clear();
+    errorStreak = 0;
+    pollInterval = Math.max(10000, pollInterval - 5000);
   } catch (e) {
+    errorStreak++;
     console.error('[Kefu] Poll error:', e.message);
+    // Rate limit or "used in wecom" — back off
+    if (errorStreak > 3) pollInterval = Math.min(120000, pollInterval + 30000);
   }
-  setTimeout(pollMessages, 10000);
+  setTimeout(pollMessages, pollInterval);
 }
 
 // === Scheduler ===
