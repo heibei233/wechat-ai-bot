@@ -63,16 +63,47 @@ function readBody(req) {
   });
 }
 
+const LOCAL_URL = 'https://heibei.serveousercontent.com';
+
+// Try local Ollama first, fall back if unreachable
+async function tryLocalReply(userId, content) {
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 2500);
+    const res = await fetch(`${LOCAL_URL}/api/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, content }),
+      signal: ctrl.signal
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.reply) {
+        console.log(`[Proxy] 使用本地越狱模型回复`);
+        return json.reply;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 async function handleMessage(userId, content) {
-  // Rate limit: max 1 reply per 3s per user
   const last = lastReply.get(userId) || 0;
   if (Date.now() - last < 3000) return;
   lastReply.set(userId, Date.now());
 
-  const replyText = await chatService.handleText({
-    conversationId: `kefu:${userId}`,
-    text: content
-  });
+  // Try local Ollama first (2.5s timeout), fall back to DeepSeek
+  let replyText = await tryLocalReply(userId, content);
+
+  if (!replyText) {
+    replyText = await chatService.handleText({
+      conversationId: `kefu:${userId}`,
+      text: content
+    });
+    console.log(`[Proxy] 本地不可用，使用 DeepSeek 回复`);
+  }
+
   if (!replyText) return;
 
   console.log(`[Reply] ${userId}: ${replyText.slice(0, 80)}`);

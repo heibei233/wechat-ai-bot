@@ -118,9 +118,13 @@ export async function runKefuAdapter({ chatService, config }) {
     }
   }
 
-  // Start polling
-  console.log('[Kefu] Starting message polling (every 10s)...');
-  pollMessages();
+  // Start polling (skip if in proxy mode — Render calls /api/reply instead)
+  if (process.env.KEFU_NO_POLL !== 'true') {
+    console.log('[Kefu] Starting message polling (every 10s)...');
+    pollMessages();
+  } else {
+    console.log('[Kefu] Proxy mode — polling disabled, waiting for /api/reply');
+  }
 
   // Start scheduler for proactive messages
   console.log('[Kefu] Scheduler config:', JSON.stringify({ enabled: config.scheduler?.enabled, userId: config.scheduler?.targetUserId, jobsLen: config.scheduler?.jobsRaw?.length }));
@@ -182,6 +186,27 @@ export async function runKefuAdapter({ chatService, config }) {
       // POST — event notification (ACK only, actual messages are polled)
       if (req.method === 'POST' && url.pathname === '/kefu') {
         res.writeHead(200); res.end('ok');
+        return;
+      }
+
+      // API endpoint: Render calls this to get local Ollama replies
+      if (req.method === 'POST' && url.pathname === '/api/reply') {
+        try {
+          const body = await readBody(req);
+          const { userId, content } = JSON.parse(body);
+          if (!content) { res.writeHead(400); res.end(JSON.stringify({ error: 'missing content' })); return; }
+
+          const replyText = await chatService.handleText({
+            conversationId: userId ? `kefu:${userId}` : 'proxy',
+            text: content
+          });
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ reply: replyText || '' }));
+        } catch {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: 'internal' }));
+        }
         return;
       }
 

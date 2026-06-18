@@ -6,9 +6,7 @@ module.exports = {
       cwd: __dirname,
       script: 'src/index.js',
       interpreter: 'node',
-      env: {
-        BOT_PORT: '3000'
-      },
+      // Env is read from .env file (dotenv)
       // Auto-restart on crash
       autorestart: true,
       max_restarts: 10,
