@@ -42,20 +42,20 @@ let pollInterval = 10000;
 let errorStreak = 0;
 
 async function resolveAccount() {
-  // Try API first, fall back to env
   try {
     const accounts = await listKefuAccounts(apiConfig);
     if (accounts.length > 0) {
       resolvedOpenKfId = accounts[0].open_kfid;
-      console.log(`[Kefu] API resolved open_kfid: ${resolvedOpenKfId}`);
-    } else {
-      console.log(`[Kefu] API returned no accounts, using env: ${openKfId}`);
+      console.log(`[Kefu] open_kfid resolved from API: ${resolvedOpenKfId}`);
     }
   } catch (e) {
-    console.error(`[Kefu] Account list API failed (${e.message}), using env: ${openKfId}`);
+    console.error(`[Kefu] Account list API failed: ${e.message}`);
   }
   apiConfig.openKfId = resolvedOpenKfId;
-  console.log(`[Kefu] Final open_kfid: ${apiConfig.openKfId}`);
+  // Never fall back to the admin-console ID — it's a different thing and will fail
+  if (!resolvedOpenKfId) {
+    throw new Error('Failed to resolve open_kfid from API. Check Secret and IP whitelist.');
+  }
 }
 
 async function pollMessages() {
