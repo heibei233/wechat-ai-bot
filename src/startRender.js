@@ -234,3 +234,14 @@ const server = createServer(async (req, res) => {
 server.listen(port, '0.0.0.0', () => {
   console.log(`Bot running on port ${port}`);
 });
+
+// Graceful shutdown — flush memory to disk
+process.on('SIGTERM', () => {
+  console.log('[Shutdown] Flushing memory...');
+  memory.flush();
+  process.exit(0);
+});
+process.on('SIGINT', () => {
+  memory.flush();
+  process.exit(0);
+});
