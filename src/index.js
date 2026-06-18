@@ -2,25 +2,16 @@ import { runConsoleAdapter } from './adapters/console.js';
 import { ChatService } from './bot/chatService.js';
 import { config, validateConfig } from './config.js';
 import { ChatMemory } from './memory/chatMemory.js';
+import { AiRouter } from './ai/aiRouter.js';
 
 validateConfig();
 
-let aiClient;
-if (config.aiProvider === 'ollama') {
-  const { OllamaClient } = await import('./ai/ollamaClient.js');
-  aiClient = new OllamaClient({
-    ...config.ollama,
-    systemPrompt: config.bot.systemPrompt
-  });
-  console.log(`使用本地 Ollama: ${config.ollama.model}`);
-} else {
-  const { DeepSeekClient } = await import('./ai/deepseekClient.js');
-  aiClient = new DeepSeekClient({
-    ...config.deepseek,
-    systemPrompt: config.bot.systemPrompt
-  });
-  console.log(`使用云端 DeepSeek: ${config.deepseek.model}`);
-}
+const aiClient = new AiRouter({
+  deepseek: config.deepseek,
+  ollama: config.ollama,
+  systemPrompt: config.bot.systemPrompt
+});
+console.log(`AI 路由已就绪 — 自动检测 Ollama，不可用时回退 DeepSeek`);
 
 const memory = new ChatMemory({ maxTurns: config.bot.maxTurns });
 const chatService = new ChatService({ aiClient, memory });
