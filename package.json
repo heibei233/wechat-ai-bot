@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/startRender.js",
     "dev": "node src/index.js",
     "console": "node src/index.js",
     "wechat": "node src/startWechat.js",
