@@ -3,19 +3,22 @@ import { DeepSeekClient } from './deepseekClient.js';
 import { OllamaClient } from './ollamaClient.js';
 
 export class AiRouter {
-  constructor({ deepseek, ollama, systemPrompt }) {
-    this.systemPrompt = systemPrompt;
-    this.deepseek = new DeepSeekClient({ ...deepseek, systemPrompt });
-    this.ollama = new OllamaClient({ ...ollama, systemPrompt });
+  constructor({ deepseek, ollama, deepseekPrompt, ollamaPrompt, systemPrompt }) {
+    // DeepSeek gets the roleplay-wrapped prompt, Ollama gets the explicit one
+    const dsPrompt = deepseekPrompt || systemPrompt;
+    const olPrompt = ollamaPrompt || systemPrompt || deepseekPrompt;
+
+    this.deepseekPrompt = dsPrompt;
+    this.ollamaPrompt = olPrompt;
+    this.deepseek = new DeepSeekClient({ ...deepseek, systemPrompt: dsPrompt });
+    this.ollama = new OllamaClient({ ...ollama, systemPrompt: olPrompt });
     this.ollamaConfig = ollama;
-    this.currentProvider = 'deepseek'; // default
+    this.currentProvider = 'deepseek';
     this.lastCheck = 0;
-    this.checkInterval = 60000; // re-check every 60s
-    this.checking = null;
+    this.checkInterval = 60000;
   }
 
   async checkOllama() {
-    // Don't check too often
     if (Date.now() - this.lastCheck < this.checkInterval) {
       return this.currentProvider === 'ollama';
     }
@@ -30,7 +33,7 @@ export class AiRouter {
       clearTimeout(timeout);
       const ok = res.ok;
       if (ok && this.currentProvider !== 'ollama') {
-        console.log('[AiRouter] ✅ Ollama 已连接，切换到本地越狱模型');
+        console.log('[AiRouter] ✅ Ollama 已连接，切换到本地越狱模型（无审查）');
       } else if (!ok && this.currentProvider === 'ollama') {
         console.log('[AiRouter] ❌ Ollama 断开，回退到 DeepSeek');
       }
@@ -46,7 +49,6 @@ export class AiRouter {
   }
 
   async reply(history, userText) {
-    // Check Ollama before each reply (throttled)
     await this.checkOllama();
 
     if (this.currentProvider === 'ollama') {

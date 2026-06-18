@@ -9,7 +9,7 @@ import { WeComCrypto } from './wecom/crypto.js';
 import { getWeather } from './wecom/weather.js';
 
 const port = Number(process.env.PORT) || 3000;
-const systemPrompt = process.env.BOT_SYSTEM_PROMPT || '';
+const systemPrompt = process.env.DEEPSEEK_PROMPT || process.env.BOT_SYSTEM_PROMPT || '';
 const targetUserId = process.env.SCHEDULER_USER_ID || '';
 
 const aiClient = new DeepSeekClient({
