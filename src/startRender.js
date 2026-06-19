@@ -72,6 +72,24 @@ async function handleMessage(userId, content) {
   if (Date.now() - last < 3000) return;
   lastReply.set(userId, Date.now());
 
+  // 命令处理
+  if (content.trim() === '/记忆' || content.trim() === '/记忆 ') {
+    const report = chatService.memoryReport ? chatService.memoryReport() : '当前没有记住什么...多跟我聊聊吧～';
+    console.log(`[Reply] ${userId}: ${report.slice(0, 40)}`);
+    await sendKefuMessage(apiConfig, userId, report);
+    return;
+  }
+  if (content.trim() === '/状态' || content.trim() === '/状态 ') {
+    console.log(`[Reply] ${userId}: /状态`);
+    await sendKefuMessage(apiConfig, userId, '✅ 运行中 | DeepSeek 云端 | Render 24h');
+    return;
+  }
+  if (content.trim() === '/重置' || content.trim() === '/重置 ') {
+    console.log(`[Reply] ${userId}: /重置`);
+    await sendKefuMessage(apiConfig, userId, '✅ 已清空上下文，重新开始吧～');
+    return;
+  }
+
   // 真人回复策略
   const strat = replyStrategy(content, 0);
   if (strat.mode === 'reaction' || strat.mode === 'short') {
