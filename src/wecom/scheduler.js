@@ -120,12 +120,16 @@ export function startScheduler({ apiConfig, chatService, userId, schedules }) {
   }
 
   async function checkAll() {
+    // 静默时段：23:00-07:59 只发定时消息（早安晚安），不发随机消息
+    const hour = new Date().getHours();
+    const quietTime = (hour >= 23 || hour < 8);
+
     for (let i = 0; i < schedules.length; i++) {
       try {
         const job = schedules[i];
         if (job.cron === 'RANDOM') {
-          // Random interval job — fire with probability based on interval
-          const [min, max] = job.interval || [60, 180]; // default 1-3 hours
+          if (quietTime) continue; // 深夜安静，不吵人
+          const [min, max] = job.interval || [60, 180];
           const range = max - min;
           const probPerCheck = range > 0 ? 30 / ((min + range / 2) * 60) : 30 / (min * 60);
           if (Math.random() < probPerCheck && rateLimit.canSend()) {

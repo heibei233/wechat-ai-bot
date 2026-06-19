@@ -7,6 +7,7 @@ import { ChatMemory } from './memory/chatMemory.js';
 import { sendKefuMessage, listKefuAccounts } from './wecom/kefuApi.js';
 import { WeComCrypto } from './wecom/crypto.js';
 import { getWeather } from './wecom/weather.js';
+import { humanize, typingDelay, replyStrategy, getShortReply, getContext } from './ai/humanizer.js';
 
 const port = Number(process.env.PORT) || 3000;
 const systemPrompt = process.env.DEEPSEEK_PROMPT || process.env.BOT_SYSTEM_PROMPT || '';
@@ -65,50 +66,32 @@ function readBody(req) {
   });
 }
 
-const LOCAL_URL = 'https://heibei.serveousercontent.com';
-
-// Try local Ollama first, fall back if unreachable
-async function tryLocalReply(userId, content) {
-  try {
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 2500);
-    const res = await fetch(`${LOCAL_URL}/api/reply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, content }),
-      signal: ctrl.signal
-    });
-    clearTimeout(timeout);
-    if (res.ok) {
-      const json = await res.json();
-      if (json.reply) {
-        console.log(`[Proxy] 使用本地越狱模型回复`);
-        return json.reply;
-      }
-    }
-  } catch {}
-  return null;
-}
 
 async function handleMessage(userId, content) {
   const last = lastReply.get(userId) || 0;
   if (Date.now() - last < 3000) return;
   lastReply.set(userId, Date.now());
 
-  // Try local Ollama first (2.5s timeout), fall back to DeepSeek
-  let replyText = await tryLocalReply(userId, content);
-
-  if (!replyText) {
-    replyText = await chatService.handleText({
-      conversationId: `kefu:${userId}`,
-      text: content
-    });
-    console.log(`[Proxy] 本地不可用，使用 DeepSeek 回复`);
+  // 真人回复策略
+  const strat = replyStrategy(content, 0);
+  if (strat.mode === 'reaction' || strat.mode === 'short') {
+    await typingDelay();
+    const short = humanize(getShortReply(), 0);
+    console.log(`[Reply] ${userId}: ${short.slice(0, 40)}`);
+    await sendKefuMessage(apiConfig, userId, short);
+    return;
   }
 
+  let replyText = await chatService.handleText({
+    conversationId: `kefu:${userId}`,
+    text: strat.mode === 'sleepy' ? '（你很困了，回1-2句短的，带...）' + content : content
+  });
+
   if (!replyText) return;
+  replyText = humanize(replyText, 0);
 
   console.log(`[Reply] ${userId}: ${replyText.slice(0, 80)}`);
+  await typingDelay();
   const r = await sendKefuMessage(apiConfig, userId, replyText);
   if (r?.errcode !== 0) {
     console.error(`[Reply] Failed [${r?.errcode}]: ${r?.errmsg}`);
