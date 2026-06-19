@@ -22,4 +22,8 @@ export class DeepSeekClient {
 
     return completion.choices?.[0]?.message?.content?.trim() || '我刚刚有点卡住了，能再说一遍吗？';
   }
+
+  setSystemPrompt(prompt) {
+    this.systemPrompt = prompt;
+  }
 }

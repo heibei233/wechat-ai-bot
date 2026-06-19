@@ -20,6 +20,11 @@ export const config = {
     baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
     model: process.env.OLLAMA_MODEL || 'deepseek-r1:32b'
   },
+  openrouter: {
+    apiKey: process.env.OPENROUTER_API_KEY || '',
+    baseURL: 'https://openrouter.ai/api/v1',
+    model: process.env.OPENROUTER_MODEL || 'sao10k/l3-euryale-70b'
+  },
   bot: {
     systemPrompt:
       process.env.BOT_SYSTEM_PROMPT ||

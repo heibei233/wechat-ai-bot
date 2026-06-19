@@ -12,10 +12,12 @@ const port = Number(process.env.PORT) || 3000;
 const systemPrompt = process.env.DEEPSEEK_PROMPT || process.env.BOT_SYSTEM_PROMPT || '';
 const targetUserId = process.env.SCHEDULER_USER_ID || '';
 
+// Use OpenRouter if configured, else DeepSeek
+const orKey = process.env.OPENROUTER_API_KEY;
 const aiClient = new DeepSeekClient({
-  apiKey: process.env.DEEPSEEK_API_KEY || '',
-  baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
-  model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+  apiKey: orKey || process.env.DEEPSEEK_API_KEY || '',
+  baseURL: orKey ? 'https://openrouter.ai/api/v1' : (process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'),
+  model: orKey ? (process.env.OPENROUTER_MODEL || 'sao10k/l3-euryale-70b') : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
   systemPrompt
 });
 

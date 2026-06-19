@@ -8,11 +8,9 @@ validateConfig();
 
 const aiClient = new AiRouter({
   deepseek: config.deepseek,
-  ollama: config.ollama,
-  deepseekPrompt: process.env.DEEPSEEK_PROMPT || config.bot.systemPrompt,
-  ollamaPrompt: process.env.OLLAMA_PROMPT || process.env.BOT_SYSTEM_PROMPT || config.bot.systemPrompt
+  deepseekPrompt: config.bot.systemPrompt
 });
-console.log(`AI 路由已就绪 — 自动检测 Ollama，不可用时回退 DeepSeek`);
+console.log(`AI — DeepSeek 云端`);
 
 const memory = new ChatMemory({ maxTurns: config.bot.maxTurns });
 const chatService = new ChatService({ aiClient, memory });
