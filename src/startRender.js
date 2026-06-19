@@ -74,7 +74,7 @@ async function handleMessage(userId, content) {
 
   // 命令处理
   if (content.trim() === '/记忆' || content.trim() === '/记忆 ') {
-    const report = chatService.memoryReport ? chatService.memoryReport() : '当前没有记住什么...多跟我聊聊吧～';
+    const report = aiClient.getMemoryReport ?aiClient.getMemoryReport() : '我刚醒...还不太记得什么～';
     console.log(`[Reply] ${userId}: ${report.slice(0, 40)}`);
     await sendKefuMessage(apiConfig, userId, report);
     return;
